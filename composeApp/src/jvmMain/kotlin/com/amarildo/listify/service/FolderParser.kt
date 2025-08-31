@@ -37,8 +37,18 @@ class FolderParser {
                 outFile.writeText("")
             }
 
-            // attraversamento ricorsivo dei file, escludendo il file di output stesso
-            val outPath = outFile.absoluteFile.normalize().toPath()
+            val outPath: java.nio.file.Path? = outFile.absoluteFile.normalize().toPath()
+
+            // 1. scrivi in cima l'alberatura
+            outFile.appendText("== DIRECTORY TREE ==\n")
+            writeDirectoryTree(
+                root = startDir,
+                outFile = outFile,
+                outPath = outPath,
+            )
+            outFile.appendText("\n\n== FILE CONTENTS ==\n")
+
+            // 2. traversal ricorsivo dei file
             val files: List<File> = startDir.walk(FileWalkDirection.TOP_DOWN)
                 .filter { it.isFile }
                 .map { it.absoluteFile.normalize() }
@@ -57,13 +67,53 @@ class FolderParser {
             return outFile.absolutePath
         }
 
+        private fun writeDirectoryTree(
+            root: File,
+            outFile: File,
+            outPath: java.nio.file.Path?,
+        ) {
+            // connectors
+            val tee = "├── "
+            val last = "└── "
+            val pipe = "│   "
+            val space = "    "
+
+            fun childrenOf(dir: File): List<File> {
+                val arr = dir.listFiles() ?: return emptyList()
+                return arr.asSequence()
+                    .map { it.absoluteFile.normalize() }
+                    .filter { it.toPath() != outPath }
+                    .sortedWith(
+                        compareBy<File> { !it.isDirectory } // directory prima dei file
+                            .thenBy { it.name.lowercase() },
+                    )
+                    .toList()
+            }
+
+            fun walk(dir: File, prefix: String) {
+                val children = childrenOf(dir)
+                children.forEachIndexed { index, child ->
+                    val isLast = index == children.lastIndex
+                    val connector = if (isLast) last else tee
+                    outFile.appendText(prefix + connector + child.name + "\n")
+                    if (child.isDirectory) {
+                        val nextPrefix = prefix + if (isLast) space else pipe
+                        walk(child, nextPrefix)
+                    }
+                }
+            }
+
+            // radice
+            outFile.appendText(root.name + "\n")
+            walk(root, "")
+        }
+
         private fun appendFileContent(
             file: File,
             outFile: File,
             prefixesToFilter: List<String> = emptyList(),
         ) {
             outFile.appendText("=== File: ${file.absolutePath} ===\n")
-
             try {
                 val content: String = file.useLines { lines ->
                     val filteredLines: List<String> = if (prefixesToFilter.isEmpty()) {
@@ -86,7 +136,6 @@ class FolderParser {
             } catch (ex: Exception) {
                 throw IOException("Errore nella lettura del file ${file.absolutePath}: ${ex.message}", ex)
             }
-
             outFile.appendText("\n\n\n")
         }
     }
