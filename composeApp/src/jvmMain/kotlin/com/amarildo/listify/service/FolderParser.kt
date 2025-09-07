@@ -46,6 +46,8 @@ class FolderParser {
                 outFile = outFile,
                 outPath = outPath,
             )
+            outFile.appendText("\n\n== BEAN DEPENDENCY GRAPH ==\n")
+            outFile.appendText(SpringBeanFileParser().printGraph(startDir))
             outFile.appendText("\n\n== FILE CONTENTS ==\n")
 
             // 2. traversal ricorsivo dei file
