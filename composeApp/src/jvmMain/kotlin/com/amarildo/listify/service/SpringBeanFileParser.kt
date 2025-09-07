@@ -8,8 +8,6 @@ private const val CONTROLLER = "@Controller"
 private const val REST_CONTROLLER = "@RestController"
 private const val SERVICE = "@Service"
 private const val REPOSITORY = "@Repository"
-private const val CONT_ROLLER = "CONT_ROLLER"
-private const val REPO_SITORY = "REPO_SITORY"
 
 private val targetAnnotations: Set<String> = setOf(
     COMPONENT,
@@ -20,10 +18,10 @@ private val targetAnnotations: Set<String> = setOf(
 )
 
 val groups = mapOf(
-    "CONTROLLER" to CONT_ROLLER,
-    "SERVICE" to "SER_VICE",
-    "COMPONENT" to "COMP_ONENT",
-    "REPOSITORY" to REPO_SITORY,
+    "CONTROLLER" to "_CONTROLLER",
+    "SERVICE" to "_SERVICE",
+    "COMPONENT" to "_COMPONENT",
+    "REPOSITORY" to "_REPOSITORY",
 )
 
 data class Total(val allFiles: List<ClassInfo>) {
@@ -52,11 +50,10 @@ class MermaidClassMapper(classes: List<ClassInfo>) {
     val mappedClasses: Map<String, String> = classes
         .mapNotNull { info ->
             when {
-                info.isService() -> "SER_VICE${serviceCounter.getAndIncrement()}" to info.className
-                info.isService() -> "SER_VICE${serviceCounter.getAndIncrement()}" to info.className
-                info.isComponent() -> "COMP_ONENT${componentCounter.getAndIncrement()}" to info.className
-                info.isRepository() -> REPO_SITORY + "${repositoryCounter.getAndIncrement()}" to info.className
-                info.isController() -> CONT_ROLLER + "${controllerCounter.getAndIncrement()}" to info.className
+                info.isService() -> groups["SERVICE"] + "${serviceCounter.getAndIncrement()}" to info.className
+                info.isComponent() -> groups["COMPONENT"] + "${componentCounter.getAndIncrement()}" to info.className
+                info.isRepository() -> groups["REPOSITORY"] + "${repositoryCounter.getAndIncrement()}" to info.className
+                info.isController() -> groups["CONTROLLER"] + "${controllerCounter.getAndIncrement()}" to info.className
                 else -> null
             }
         }
@@ -95,12 +92,18 @@ class SpringBeanFileParser {
 
                 trimmed.startsWith("public class") ||
                     trimmed.startsWith("class ") ||
-                    trimmed.contains(" class ") ->
-                    className = trimmed.substringAfter("class").trim().split(" ", "{")[0]
+                    trimmed.contains(" class ") -> {
+                    if (className == null) {
+                        className = trimmed.substringAfter("class").trim().split(" ", "{")[0]
+                    }
+                }
 
                 trimmed.contains("public interface ") ||
-                    trimmed.contains(" interface ") ->
-                    className = trimmed.substringAfter("interface").trim().split(" ", "{")[0]
+                    trimmed.contains(" interface ") -> {
+                    if (className == null) {
+                        className = trimmed.substringAfter("interface").trim().split(" ", "{")[0]
+                    }
+                }
 
                 trimmed.startsWith("@") ->
                     annotations += trimmed.substringBefore("(")
@@ -133,12 +136,12 @@ class SpringBeanFileParser {
             }
             mapper.mappedClasses.filterKeys { it.startsWith(prefix) }.forEach { (id, name) ->
                 val node = when (prefix) {
-                    CONT_ROLLER -> "$id[[$name]]"
-                    REPO_SITORY -> "$id[($name)]"
+                    groups["CONTROLLER"] -> "$id[[$name]]"
+                    groups["REPOSITORY"] -> "$id[($name)]"
                     else -> "$id($name)"
                 }
                 mermaidGraph.append("    $node;\n")
-                if (node.contains(CONT_ROLLER)) {
+                if (node.contains("_CONTROLLER")) {
                     mermaidGraph.append("    style $id fill:#008000,stroke:#333,stroke-width:4px\n")
                 }
             }
