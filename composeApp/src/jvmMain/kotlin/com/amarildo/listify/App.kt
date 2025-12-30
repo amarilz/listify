@@ -25,6 +25,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -49,7 +50,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -78,6 +78,7 @@ fun App(vm: MainViewModel = viewModel()) {
 
         var prefixChecked by remember { mutableStateOf(false) }
         var prefixText by remember { mutableStateOf("") }
+        var foldersNameToExclude by remember { mutableStateOf("") }
         var isPathLoading by remember { mutableStateOf(false) }
 
         LaunchedEffect(uiState.successMessage, uiState.error) {
@@ -233,24 +234,28 @@ fun App(vm: MainViewModel = viewModel()) {
                                 enter = expandVertically() + fadeIn(),
                                 exit = shrinkVertically() + fadeOut(),
                             ) {
-                                Column {
-                                    Spacer(modifier = Modifier.height(12.dp))
-                                    Text(
-                                        "Remove lines that begin with any of the comma-separated words.",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    OutlinedTextField(
+                                Column(
+//                                    modifier = modifier,
+                                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                                ) {
+                                    SettingsDivider()
+
+                                    SettingsTextFieldBlock(
+                                        title = "Remove lines by prefix",
+                                        description = "Removes lines that begin with one of the specified words (separated by commas).",
                                         value = prefixText,
                                         onValueChange = { prefixText = it },
-                                        label = { Text("Prefixes (comma separated)") },
-                                        placeholder = { Text("e.g., DEBUG, INFO, ERROR", color = Color.Gray) },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            focusedLabelColor = MaterialTheme.colorScheme.primary,
-                                        ),
+                                        placeholder = "e.g., import, package",
+                                    )
+
+                                    SettingsDivider()
+
+                                    SettingsTextFieldBlock(
+                                        title = "Folders to Exclude",
+                                        description = "Excludes folders that match the specified names (separated by commas).",
+                                        value = foldersNameToExclude,
+                                        onValueChange = { foldersNameToExclude = it },
+                                        placeholder = "e.g., .idea, .git, test",
                                     )
                                 }
                             }
@@ -264,7 +269,7 @@ fun App(vm: MainViewModel = viewModel()) {
                     val isFormValid = basePath.isNotBlank()
 
                     Button(
-                        onClick = { vm.parseAndCreateFile(basePath, prefixText) },
+                        onClick = { vm.parseAndCreateFile(basePath, prefixText, foldersNameToExclude) },
                         enabled = isFormValid && !isProcessing,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -367,4 +372,62 @@ fun EnhancedInputRow(
             shape = RoundedCornerShape(12.dp),
         )
     }
+}
+
+@Composable
+private fun SettingsTextFieldBlock(
+    title: String,
+    description: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            placeholder = { Text(placeholder) },
+            // supportingText aggancia ancora di più visivamente il testo al field
+//            supportingText = {
+//                Text(
+//                    text = "Separated by commas. Ex: ${placeholder.removePrefix("e.g., ")}",
+//                    style = MaterialTheme.typography.bodySmall,
+//                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+//                )
+//            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                focusedLabelColor = MaterialTheme.colorScheme.primary,
+            ),
+        )
+    }
+}
+
+@Composable
+private fun SettingsDivider(
+    modifier: Modifier = Modifier,
+) {
+    HorizontalDivider(
+        modifier = modifier.padding(vertical = 4.dp),
+        thickness = 1.dp,
+        color = MaterialTheme.colorScheme.outlineVariant,
+    )
 }

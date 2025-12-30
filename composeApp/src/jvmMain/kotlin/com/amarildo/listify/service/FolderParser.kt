@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.nio.file.Path
 
 class FolderParser {
 
@@ -24,7 +25,7 @@ class FolderParser {
             }
         }
 
-        fun processDirectory(inputDir: String, prefixesToFilter: String): String {
+        fun processDirectory(inputDir: String, prefixesToFilter: String, foldersNameToExclude: String): String {
             val startDir = File(inputDir)
             val outFile = File(inputDir + File.separator + "listify.txt")
 
@@ -39,22 +40,31 @@ class FolderParser {
 
             val outPath: java.nio.file.Path? = outFile.absoluteFile.normalize().toPath()
 
+            val foldersExcludedSet: Set<String> = foldersNameToExclude
+                .split(",")
+                .filter { it.trim().isNotEmpty() }
+                .map { it.trim() }
+                .toSet()
+
             // 1. scrivi in cima l'alberatura
             outFile.appendText("== DIRECTORY TREE ==\n")
             writeDirectoryTree(
                 root = startDir,
                 outFile = outFile,
                 outPath = outPath,
+                foldersExcludedSet = foldersExcludedSet,
             )
-            outFile.appendText("\n\n== BEAN DEPENDENCY GRAPH ==\n")
-            outFile.appendText(SpringBeanFileParser().printGraph(startDir))
-            outFile.appendText("\n\n== FILE CONTENTS ==\n")
 
             // 2. traversal ricorsivo dei file
+            outFile.appendText("\n\n== FILE CONTENTS ==\n")
             val files: List<File> = startDir.walk(FileWalkDirection.TOP_DOWN)
+                .onEnter { dir ->
+                    // se la cartella è nel set, restituisce false e non entra
+                    dir.name !in foldersExcludedSet
+                }
                 .filter { it.isFile }
                 .map { it.absoluteFile.normalize() }
-                .filter { it.toPath() != outPath }
+                .filter { it.toPath() != outPath && it.parentFile?.name !in foldersExcludedSet }
                 .distinctBy { it.toPath() } // evita duplicati (es. alias/symlink risolti uguali)
                 .sortedBy { it.absolutePath }
                 .toList()
@@ -72,7 +82,8 @@ class FolderParser {
         private fun writeDirectoryTree(
             root: File,
             outFile: File,
-            outPath: java.nio.file.Path?,
+            outPath: Path?,
+            foldersExcludedSet: Set<String>,
         ) {
             // connectors
             val tee = "├── "
@@ -85,6 +96,7 @@ class FolderParser {
                 return arr.asSequence()
                     .map { it.absoluteFile.normalize() }
                     .filter { it.toPath() != outPath }
+                    .filter { !foldersExcludedSet.contains(it.name) }
                     .sortedWith(
                         compareBy<File> { !it.isDirectory } // directory prima dei file
                             .thenBy { it.name.lowercase() },
