@@ -27,7 +27,7 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun parseAndCreateFile(basePath: String, prefixesToFilter: String) {
+    fun parseAndCreateFile(basePath: String, prefixesToFilter: String, foldersNameToExclude: String) {
         if (basePath.isBlank()) {
             _uiState.value = _uiState.value.copy(
                 error = "Base path cannot be empty",
@@ -39,7 +39,7 @@ class MainViewModel : ViewModel() {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
                 val outputFilePath = withContext(Dispatchers.IO) {
-                    FolderParser.processDirectory(basePath, prefixesToFilter)
+                    FolderParser.processDirectory(basePath, prefixesToFilter, foldersNameToExclude)
                 }
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
