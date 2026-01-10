@@ -44,8 +44,10 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.amarildo.listify"
-            packageVersion = "1.0.2"
+            modules("jdk.security.auth")
+
+            packageName = "Listify"
+            packageVersion = "1.0.3"
         }
     }
 }
